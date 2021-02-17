@@ -1,0 +1,7 @@
+#!/bin/bash
+# My first script
+rm *.cmi
+rm *.cmo
+
+
+rm promise
