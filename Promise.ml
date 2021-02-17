@@ -4,36 +4,33 @@ type 'r reaction = ('r -> unit)
 
 type ('a, 'b) promise = Pending of ('a reaction list * 'b reaction list) | F of 'a | R of 'b
 
-type ('a) queue = ('a * 'a reaction lazy_t)  list
+type queue = (unit lazy_t) list
 
-type queue1 = (unit lazy_t) list
-
-
-let (pi: int queue ref) = ref [] ;;
+let (pi: queue ref) = ref [] ;;
 
 let default = fun a -> a; ();;
 
 let rec exec_until_empty (): unit = 
   match !pi with 
   | [] -> ()
-  | (v, task) :: xs -> 
-      ((Lazy.force task) v; 
+  | (task) :: xs -> 
+      ((Lazy.force task); 
       exec_until_empty () )
 ;;
 
 let resolve (p:('a, 'b) promise ref) (v:'a) : unit = 
   match !p with 
   | Pending (f_reacts, r_reacts) -> 
-      pi:= List.append (!pi) (List.map (fun f -> (v, lazy f)) f_reacts);
+      pi:= List.append (!pi) (List.map (fun f -> (lazy (f v))) f_reacts);
       p:= F v;
   | _ -> raise (Foo "Resolving a settled promise")
   ;;
 
 
-let reject (p:('a, 'b) promise ref) (v:'a) : unit = 
+let reject (p:('a, 'b) promise ref) (v:'b) : unit = 
   match !p with 
   | Pending (f_reacts, r_reacts) -> 
-      pi:= List.append (!pi) (List.map (fun f -> (v, lazy f)) r_reacts);
+      pi:= List.append (!pi) (List.map (fun f -> lazy (f v)) r_reacts);
       p:= R v;
   | _ -> raise (Foo "Rejecting a settled promise")
   ;;
@@ -45,7 +42,7 @@ let onResolve (p:('a, 'b) promise ref) (fn:'a reaction) : unit =
   | F v | R v -> raise (Foo "Registering a resolve function on a settled promise")
   ;;
 
-let onReject (p:('a, 'b) promise ref) (fn:'a reaction) : unit =
+let onReject (p:('a, 'b) promise ref) (fn:'b reaction) : unit =
   match !p with 
   | Pending (f_reacts, r_reacts) -> 
       p := Pending (f_reacts , fn :: r_reacts)
@@ -57,7 +54,7 @@ let link (p1:('a, 'b) promise ref) (p2:('a, 'b) promise ref) : unit =
   | Pending (f_reacts, r_reacts) -> 
       p1 := Pending (default :: f_reacts , default :: r_reacts)
   | F v | R v -> 
-      pi := List.append (!pi) [(v, lazy default)]
+      pi := List.append (!pi) [lazy (default v)]
 ;;
 
 (*
