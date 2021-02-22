@@ -56,6 +56,13 @@ let link (p1:('a, 'b) promise ref) (p2:('a, 'b) promise ref) : unit =
       pi := List.append (!pi) [lazy (default v)]
 ;;
 
+let then_ (p1:('a, 'b) promise ref) (fun1:('a->'c)) (fun2:('b -> 'd)) : ('c, 'd) promise  = 
+  match !p1 with 
+  | Pending (f_reacts, r_reacts) -> raise (Foo "pending for the promise to finish")
+  | F v -> F (fun1 v)
+  | R v -> R (fun2 v)
+  ;;
+
 let (pro: (int, string) promise  ref ) = ref (Pending ([], []));;
 
 let res = resolve pro 1;;
