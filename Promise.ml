@@ -8,7 +8,7 @@ type queue = (unit lazy_t) list
 
 let (pi: queue ref) = ref [] ;;
 
-let default = fun a -> a; ();;
+let default = fun a -> a ; ();;
 
 let rec exec_until_empty (): unit = 
   match !pi with 
@@ -63,6 +63,21 @@ let then_ (p1:('a, 'b) promise ref) (fun1:('a->'c)) (fun2:('b -> 'd)) : ('c, 'd)
   | R v -> R (fun2 v)
   ;;
 
+let return_ (v:'a) : ('a, 'd) promise = 
+  F v ;;
+
+
+let test_if p = if true 
+  then return_ p (*a -> a*)
+  else return_ p ;; (* a -> ('a, 'd) promise *)
+
+let test_multi_settles p v = 
+  resolve p v ;
+  resolve p v ;;
+
+
+  (*
 let (pro: (int, string) promise  ref ) = ref (Pending ([], []));;
 
 let res = resolve pro 1;;
+*)
