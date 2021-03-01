@@ -2,9 +2,10 @@
 # My first script
 
 ocamlc -c -o Promise.cmo Promise.ml
+ocamlc -c -o Tests.cmo tests.ml
 
 
-ocamlc -o promise Promise.cmo
+ocamlc -o promise Promise.cmo Tests.cmo
 
 
 

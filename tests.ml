@@ -1,0 +1,177 @@
+open Promise
+
+let test_if p = if true 
+  then return_ p (*a -> a*)
+  else return_ p ;; (* a -> ('a, 'd) promise *)
+
+let test_multi_settles p v = 
+  resolve p v ;
+  resolve p v ;;
+
+
+(* Missing promise rejections *)
+
+(* anti pattern: promise is implicitly rejected by throwing an exception  *)
+
+let test_MissingExceptionalReject =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let _ = then_ p1 (fun x -> raise (Foo "unhandled error")) default in
+  ();
+;;
+
+let test_MissingExceptionalReject2 =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let p2 = then_ p1 (fun x -> ()) default in
+  let p3 = then_ p2 (fun y -> ()) default in
+  ();
+;;
+
+let test_MissingExceptionalReject3 =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let p2 = then_ p1 (fun x -> raise (Foo "unhandled error")) default in
+  let p3 = then_ p2 (fun y -> ()) default in
+  ();
+;;
+
+let test_MissingExceptionalRejectCaughtLater =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let p2 = then_ p1 (fun x -> raise (Foo "unhandled error")) default in
+  let p3 = then_ p2 (fun y -> ()) (fun err -> err) in
+  ();
+;;
+let test_MissingExceptionalRejectCaughtLater2 =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let p2 = then_ p1 (fun x -> raise (Foo "unhandled error")) default in
+  let p3 = then_ p2 (fun y -> ()) default in
+  let p4 = then_ p3 default (fun err -> err) in
+  ();
+
+(* Forgetting to explicitly return *)
+
+(* we get a helpful type error here because p2 *wrongfully* has type (unit, unit) Promise, since it doesn't return anything. Then, when p3 uses the result of p2, it expects a value to print, but p2 returns a unit, and so the type-checking fails.*)
+let test_BugMissingReturn1 =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  let p2 = then_ p1 (fun value -> Printf.printf "%d" value) default in (* doesnt retunr anything *)
+  let p3 = then_ p2 (fun value -> Printf.printf "%d" value) default in (* p2 which returns nothing is used to resolve p3 *)
+  ();
+;;
+
+(* Forgetting to return value in the Reject function results in type-checking error when the promise is subsequently used!*)
+let test_BugMissingReturn2 =
+  let p1 = promisify [] [] in
+  resolve p1 42;
+  (* forgot a return value in the reject function *)
+  let p2 = then_ p1 (fun value -> Printf.printf "%d" value; 82) (fun reason -> Printf.printf "%s" reason) in
+  let p3 = then_ p2 (fun value -> Printf.printf "%d" value) in
+  () ;
+;;
+
+let test_BugMissingReturn3 =
+  let p1 = promisify [] [] in
+  resolve p1 [|1;2;3|];
+  let inc = (fun x -> x + 1; ();) in
+  let p2 = then_ p1 (fun value -> (); Array.iter inc value) default in
+  let p3 = then_ p2 (fun value -> ()) default in
+  ();
+
+;;
+
+
+  
+
+
+(* Attempting to settle a promise more than once *)
+
+let test_MultipleFulfillFunc1 =
+  let f = fun x -> 1 in
+  let p = promisify [] [] in
+  let p1 = promisify [] [] in
+  resolve p f;
+  reject p1 f;
+;;
+
+let test_MultipleFulfillFunc2 =
+  let n = ref 1 in 
+  let f = fun x -> 1 in
+  let p = promisify [] [] in
+  let p1 = promisify [] [] in
+  n := 2;
+  resolve p f;
+  reject p1 f;
+;;
+type obj_type =
+  { mutable name : string ;
+    mutable test : string;
+  }  
+let test_MultipleFulfillObj1 =
+  let obj =
+    { name = "return obj";
+      test = ""
+    } in
+  let p = promisify [] [] in
+  let p1 = promisify [] [] in
+  resolve p obj;
+  reject p1 obj;
+;;
+  
+let test_MultipleFulfillPrim1 =
+  let obj =
+    { name = "return obj";
+      test = ""
+    } in
+  let p = promisify [] [] in
+  resolve p obj;
+  obj.test <- "MultipleFulfillObj2";
+  let _ = then_ p (fun x -> (); x.test) (fun x -> (); x.test) in
+  ();
+;;
+
+let test_MultipleFulfillPrim2 =
+  let num = ref 1 in
+  let p = promisify [] [] in
+  resolve p !num;
+  num := 2;
+  let p1 = promisify [] [] in
+  reject p1 !num;
+;;
+
+
+(* not sure about how to write this one // ask yahui *)
+
+(* should print 'a' *)
+let test_MultipleThens1 =
+  let p= promisify [] [] in
+  resolve p 'a';
+  let _ = then_ p (fun _ -> 'b') default in
+  let _ = then_ p (fun res -> Printf.printf "%c" res) default in
+  ();
+;;
+
+(* should print 'b' *)
+let test_MultipleThens2 =
+  let q = promisify [] [] in
+  resolve q 'a';
+  let q1 = then_ q (fun _ -> 'b') default in
+  let _ = then_ (ref q1) (fun res -> Printf.printf "%c" res) default in
+  ();
+;;
+
+let test_BugDoubleSettle1 =  
+  let p1 = promisify [] [] in
+  let p2 = then_ p1 (fun value -> Printf.printf "%d" value) default in
+  resolve p1 42;
+  resolve p1 82; (* no effect *)
+;;
+
+
+let test_BugDoubleSettle2 =  
+  let p1 = promisify [] [] in
+  let p2 = then_ p1 (fun value -> Printf.printf "%d" value) default in
+  resolve p1 42;
+  reject p1 82; (* no effect *)

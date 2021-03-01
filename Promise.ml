@@ -18,6 +18,15 @@ let rec exec_until_empty (): unit =
       exec_until_empty () )
 ;;
 
+let promisify (resolve: 'a reaction list) (reject: 'b reaction list) : ('a, 'b) promise ref =
+  match (resolve, reject) with
+  | [], [] -> ref @@ Pending ([default], [default])
+  | ls, [] -> ref @@ Pending (ls, [default])
+  | [], ls -> ref @@ Pending ([default], ls)
+  | res_ls, rej_ls -> ref @@ Pending (res_ls, rej_ls)
+;;
+
+
 let resolve (p:('a, 'b) promise ref) (v:'a) : unit = 
   match !p with 
   | Pending (f_reacts, r_reacts) -> 
@@ -62,6 +71,7 @@ let then_ (p1:('a, 'b) promise ref) (fun1:('a->'c)) (fun2:('b -> 'd)) : ('c, 'd)
   | F v -> F (fun1 v)
   | R v -> R (fun2 v)
   ;;
+
 
 let return_ (v:'a) : ('a, 'd) promise = 
   F v ;;
