@@ -1,0 +1,12 @@
+#!/bin/bash
+# My first script
+
+ocamlc -c -o Promise.cmo Promise.ml
+ocamlc -c -o Tests.cmo Tests.ml
+
+
+ocamlc -o promise Promise.cmo Tests.cmo
+
+
+
+

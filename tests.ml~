@@ -75,7 +75,7 @@ let test_BugMissingReturn2 =
   resolve p1 42;
   (* forgot a return value in the reject function *)
   let p2 = then_ p1 (fun value -> Printf.printf "%d" value; 82) (fun reason -> Printf.printf "%s" reason) in
-  let p3 = then_ p2 (fun value -> Printf.printf "%d" value) default in
+  let p3 = then_ p2 (fun value -> Printf.printf "%d" value) in
   () ;
 ;;
 
@@ -127,7 +127,7 @@ let test_MultipleFulfillObj1 =
   reject p1 obj;
 ;;
   
-let test_MultipleFulfillObj2 =
+let test_MultipleFulfillPrim1 =
   let obj =
     { name = "return obj";
       test = ""
@@ -158,7 +158,6 @@ let test_MultipleThens1 =
   let _ = then_ p (fun _ -> 'b') default in
   let _ = then_ p (fun res -> Printf.printf "%c" res) default in
   ();
-
 ;;
 
 (* should print 'b' *)
