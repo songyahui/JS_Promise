@@ -47,7 +47,9 @@ type Msg
   = Roll
   | NewFace Int
 
-
+--@ ensures  (Roll.NewFace)^* @--
+--@ ensures  (_.NewFace)^* @--
+--@ ensures  _*.NewFace @--
 update : Msg -> Model -> (Model, Cmd Msg)
 update msg model =
   case msg of
@@ -55,7 +57,10 @@ update msg model =
       ( model
       , Random.generate NewFace (Random.int 1 6)
       )
-
+    --@ requires Roll @--
+    --@ requires emp @--
+    --@ requires (Roll.NewFace)^* @--
+    -- E = emp | A | !A | _ | E.E | E \/ E | E^* 
     NewFace newFace ->
       ( Model newFace
       , Cmd.none
